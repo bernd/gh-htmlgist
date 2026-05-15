@@ -61,6 +61,66 @@ func TestClientGet(t *testing.T) {
 	}
 }
 
+func TestClientCreate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/gists" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+
+		var body map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&body)
+
+		if body["public"] != false {
+			t.Errorf("expected public=false, got %v", body["public"])
+		}
+
+		desc, _ := body["description"].(string)
+		if desc != "[htmlgist] my page" {
+			t.Errorf("unexpected description: %s", desc)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"id":          "new123",
+			"description": "[htmlgist] my page",
+			"html_url":    "https://gist.github.com/new123",
+			"public":      false,
+			"files": map[string]interface{}{
+				"index.html": map[string]interface{}{
+					"filename": "index.html",
+					"type":     "text/html",
+					"size":     14,
+					"content":  "<h1>hello</h1>",
+				},
+			},
+			"created_at": "2026-05-15T00:00:00Z",
+			"updated_at": "2026-05-15T00:00:00Z",
+		})
+	}))
+	defer server.Close()
+
+	c := gist.NewClient(&http.Client{})
+	c.BaseURL = server.URL
+
+	files := map[string][]byte{
+		"index.html": []byte("<h1>hello</h1>"),
+	}
+
+	g, err := c.Create(files, "my page")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if g.ID != "new123" {
+		t.Errorf("expected ID new123, got %s", g.ID)
+	}
+	if g.Description != "[htmlgist] my page" {
+		t.Errorf("unexpected description: %s", g.Description)
+	}
+}
+
 func TestClientGetNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
