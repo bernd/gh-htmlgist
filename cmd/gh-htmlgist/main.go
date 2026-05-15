@@ -207,7 +207,11 @@ func runList() error {
 
 	proxyURL := getProxyURL()
 	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(tw, "ID\tDESCRIPTION\tFILES\tUPDATED\n")
+	if proxyURL != "" {
+		fmt.Fprintf(tw, "ID\tDESCRIPTION\tFILES\tUPDATED\tURL\n")
+	} else {
+		fmt.Fprintf(tw, "ID\tDESCRIPTION\tFILES\tUPDATED\n")
+	}
 	for _, g := range gists {
 		desc := strings.TrimPrefix(g.Description, gist.DescriptionPrefix)
 		fileNames := make([]string, 0, len(g.Files))
@@ -215,13 +219,13 @@ func runList() error {
 			fileNames = append(fileNames, name)
 		}
 		updated := g.UpdatedAt.Format("2006-01-02 15:04")
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", g.ID, desc, strings.Join(fileNames, ", "), updated)
+		if proxyURL != "" {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s/%s/\n", g.ID, desc, strings.Join(fileNames, ", "), updated, proxyURL, g.ID)
+		} else {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", g.ID, desc, strings.Join(fileNames, ", "), updated)
+		}
 	}
 	tw.Flush()
-
-	if proxyURL != "" {
-		fmt.Printf("\nProxy: %s/<gist-id>/\n", proxyURL)
-	}
 
 	return nil
 }
