@@ -32,7 +32,11 @@ func main() {
 
 	addr := os.Getenv("HTMLGIST_ADDR")
 	if addr == "" {
-		addr = ":8080"
+		if port := os.Getenv("PORT"); port != "" {
+			addr = ":" + port
+		} else {
+			addr = ":8080"
+		}
 	}
 
 	httpClient := &http.Client{
