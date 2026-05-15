@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/kroepke/gh-htmlgist/internal/gist"
 	"github.com/kroepke/gh-htmlgist/internal/proxy"
@@ -32,6 +33,7 @@ func main() {
 	}
 
 	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
 		Transport: &tokenTransport{
 			token:   token,
 			wrapped: http.DefaultTransport,

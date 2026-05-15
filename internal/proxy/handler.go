@@ -6,6 +6,7 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/kroepke/gh-htmlgist/internal/gist"
@@ -58,11 +59,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filename := parts[1]
 
 	if filename == "" {
-		for _, f := range g.Files {
-			ext := strings.ToLower(filepath.Ext(f.Filename))
-			if ext == ".html" || ext == ".htm" {
-				filename = f.Filename
-				break
+		if f, ok := g.Files["index.html"]; ok {
+			filename = f.Filename
+		} else {
+			var htmlFiles []string
+			for _, f := range g.Files {
+				ext := strings.ToLower(filepath.Ext(f.Filename))
+				if ext == ".html" || ext == ".htm" {
+					htmlFiles = append(htmlFiles, f.Filename)
+				}
+			}
+			sort.Strings(htmlFiles)
+			if len(htmlFiles) > 0 {
+				filename = htmlFiles[0]
 			}
 		}
 		if filename == "" {
