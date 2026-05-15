@@ -17,13 +17,13 @@ func TestClientGet(t *testing.T) {
 		if r.URL.Path != "/gists/abc123" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"id":          "abc123",
 			"description": "[htmlgist] test page",
 			"html_url":    "https://gist.github.com/abc123",
 			"public":      false,
-			"files": map[string]interface{}{
-				"index.html": map[string]interface{}{
+			"files": map[string]any{
+				"index.html": map[string]any{
 					"filename": "index.html",
 					"type":     "text/html",
 					"size":     14,
@@ -70,7 +70,7 @@ func TestClientCreate(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
-		var body map[string]interface{}
+		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
 
 		if body["public"] != false {
@@ -83,13 +83,13 @@ func TestClientCreate(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"id":          "new123",
 			"description": "[htmlgist] my page",
 			"html_url":    "https://gist.github.com/new123",
 			"public":      false,
-			"files": map[string]interface{}{
-				"index.html": map[string]interface{}{
+			"files": map[string]any{
+				"index.html": map[string]any{
 					"filename": "index.html",
 					"type":     "text/html",
 					"size":     14,
@@ -154,13 +154,13 @@ func TestClientList(t *testing.T) {
 		if r.URL.Query().Get("per_page") != "100" {
 			t.Errorf("expected per_page=100, got %s", r.URL.Query().Get("per_page"))
 		}
-		json.NewEncoder(w).Encode([]map[string]interface{}{
+		json.NewEncoder(w).Encode([]map[string]any{
 			{
 				"id":          "gist1",
 				"description": "[htmlgist] page one",
 				"html_url":    "https://gist.github.com/gist1",
 				"public":      false,
-				"files":       map[string]interface{}{},
+				"files":       map[string]any{},
 				"created_at":  "2026-05-15T00:00:00Z",
 				"updated_at":  "2026-05-15T00:00:00Z",
 			},
@@ -169,7 +169,7 @@ func TestClientList(t *testing.T) {
 				"description": "some other gist",
 				"html_url":    "https://gist.github.com/gist2",
 				"public":      true,
-				"files":       map[string]interface{}{},
+				"files":       map[string]any{},
 				"created_at":  "2026-05-15T00:00:00Z",
 				"updated_at":  "2026-05-15T00:00:00Z",
 			},
@@ -178,7 +178,7 @@ func TestClientList(t *testing.T) {
 				"description": "[htmlgist] page two",
 				"html_url":    "https://gist.github.com/gist3",
 				"public":      false,
-				"files":       map[string]interface{}{},
+				"files":       map[string]any{},
 				"created_at":  "2026-05-15T00:00:00Z",
 				"updated_at":  "2026-05-15T00:00:00Z",
 			},
@@ -212,13 +212,13 @@ func TestClientUpdate(t *testing.T) {
 		if r.URL.Path != "/gists/abc123" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"id":          "abc123",
 			"description": "[htmlgist] updated",
 			"html_url":    "https://gist.github.com/abc123",
 			"public":      false,
-			"files": map[string]interface{}{
-				"index.html": map[string]interface{}{
+			"files": map[string]any{
+				"index.html": map[string]any{
 					"filename": "index.html",
 					"type":     "text/html",
 					"size":     16,

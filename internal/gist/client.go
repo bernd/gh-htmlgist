@@ -69,14 +69,14 @@ func (c *Client) List() ([]Gist, error) {
 }
 
 func (c *Client) Update(gistID string, files map[string][]byte) (Gist, error) {
-	apiFiles := make(map[string]interface{}, len(files))
+	apiFiles := make(map[string]any, len(files))
 	for name, content := range files {
 		apiFiles[name] = map[string]string{
 			"content": string(content),
 		}
 	}
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"files": apiFiles,
 	}
 
@@ -135,14 +135,14 @@ func (c *Client) Delete(gistID string) error {
 }
 
 func (c *Client) Create(files map[string][]byte, description string) (Gist, error) {
-	apiFiles := make(map[string]interface{}, len(files))
+	apiFiles := make(map[string]any, len(files))
 	for name, content := range files {
 		apiFiles[name] = map[string]string{
 			"content": string(content),
 		}
 	}
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"description": DescriptionPrefix + description,
 		"public":      false,
 		"files":       apiFiles,

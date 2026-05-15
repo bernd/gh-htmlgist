@@ -30,32 +30,10 @@ func main() {
 		log.Fatal("GITHUB_TOKEN environment variable is required")
 	}
 
-	cfTeamURL := os.Getenv("HTMLGIST_CF_TEAM_URL")
-	if cfTeamURL == "" {
-		log.Fatal("HTMLGIST_CF_TEAM_URL environment variable is required")
-	}
-
-	cfAudience := os.Getenv("HTMLGIST_CF_AUDIENCE")
-	if cfAudience == "" {
-		log.Fatal("HTMLGIST_CF_AUDIENCE environment variable is required")
-	}
-
 	addr := os.Getenv("HTMLGIST_ADDR")
 	if addr == "" {
 		addr = ":8080"
 	}
-
-	keyStore := auth.NewKeyStore(cfTeamURL)
-	if err := keyStore.Refresh(); err != nil {
-		slog.Error("failed to fetch initial JWKS", "error", err)
-		os.Exit(1)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go keyStore.StartBackgroundRefresh(ctx, 5*time.Minute)
-
-	validator := auth.NewValidator(keyStore, cfTeamURL, cfAudience)
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -66,9 +44,35 @@ func main() {
 	}
 
 	client := gist.NewClient(httpClient)
-	handler := proxy.NewHandler(client)
-	authed := auth.Middleware(validator, handler)
+	var handler http.Handler = proxy.NewHandler(client)
+
+	if os.Getenv("HTMLGIST_AUTH_DISABLED") != "true" {
+		cfTeamURL := os.Getenv("HTMLGIST_CF_TEAM_URL")
+		if cfTeamURL == "" {
+			log.Fatal("HTMLGIST_CF_TEAM_URL environment variable is required")
+		}
+
+		cfAudience := os.Getenv("HTMLGIST_CF_AUDIENCE")
+		if cfAudience == "" {
+			log.Fatal("HTMLGIST_CF_AUDIENCE environment variable is required")
+		}
+
+		keyStore := auth.NewKeyStore(cfTeamURL)
+		if err := keyStore.Refresh(); err != nil {
+			slog.Error("failed to fetch initial JWKS", "error", err)
+			os.Exit(1)
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go keyStore.StartBackgroundRefresh(ctx, 5*time.Minute)
+
+		validator := auth.NewValidator(keyStore, cfTeamURL, cfAudience)
+		handler = auth.Middleware(validator, handler)
+	} else {
+		slog.Warn("authentication is disabled")
+	}
 
 	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, authed))
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
