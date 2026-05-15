@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	_ "text/tabwriter"
 	"time"
 
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/browser"
 	"github.com/kroepke/gh-htmlgist/internal/gist"
 )
 
@@ -140,9 +142,51 @@ func printGistInfo(g gist.Gist) {
 	}
 }
 
-// Placeholder — implemented in Task 8
 func runCreate(args []string) error {
-	return fmt.Errorf("not yet implemented")
+	if len(args) == 0 {
+		return fmt.Errorf("usage: gh htmlgist create <file...>")
+	}
+
+	if err := ensureSetup(); err != nil {
+		return err
+	}
+
+	files := make(map[string][]byte, len(args))
+	for _, path := range args {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		}
+		name := filepath.Base(path)
+		files[name] = content
+	}
+
+	client, err := newGistClient()
+	if err != nil {
+		return err
+	}
+
+	desc := ""
+	for name := range files {
+		if strings.HasSuffix(strings.ToLower(name), ".html") || strings.HasSuffix(strings.ToLower(name), ".htm") {
+			desc = name
+			break
+		}
+	}
+	if desc == "" {
+		for name := range files {
+			desc = name
+			break
+		}
+	}
+
+	g, err := client.Create(files, desc)
+	if err != nil {
+		return fmt.Errorf("creating gist: %w", err)
+	}
+
+	printGistInfo(g)
+	return nil
 }
 
 // Placeholder — implemented in Task 9
@@ -160,7 +204,18 @@ func runDelete(args []string) error {
 	return fmt.Errorf("not yet implemented")
 }
 
-// Placeholder — implemented in Task 8
 func runOpen(args []string) error {
-	return fmt.Errorf("not yet implemented")
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gh htmlgist open <gist-id>")
+	}
+
+	proxyURL := getProxyURL()
+	if proxyURL == "" {
+		return fmt.Errorf("no proxy URL configured — run 'gh htmlgist setup' first")
+	}
+
+	url := proxyURL + "/" + args[0] + "/"
+
+	b := browser.New("", os.Stdout, os.Stderr)
+	return b.Browse(url)
 }
