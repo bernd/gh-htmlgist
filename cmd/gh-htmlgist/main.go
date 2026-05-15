@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	_ "text/tabwriter"
+	"text/tabwriter"
 	"time"
 
 	ghapi "github.com/cli/go-gh/v2/pkg/api"
@@ -189,19 +189,92 @@ func runCreate(args []string) error {
 	return nil
 }
 
-// Placeholder — implemented in Task 9
-func runUpdate(args []string) error {
-	return fmt.Errorf("not yet implemented")
-}
-
-// Placeholder — implemented in Task 9
 func runList() error {
-	return fmt.Errorf("not yet implemented")
+	client, err := newGistClient()
+	if err != nil {
+		return err
+	}
+
+	gists, err := client.List()
+	if err != nil {
+		return fmt.Errorf("listing gists: %w", err)
+	}
+
+	if len(gists) == 0 {
+		fmt.Println("No htmlgist gists found.")
+		return nil
+	}
+
+	proxyURL := getProxyURL()
+	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+	fmt.Fprintf(tw, "ID\tDESCRIPTION\tFILES\tUPDATED\n")
+	for _, g := range gists {
+		desc := strings.TrimPrefix(g.Description, gist.DescriptionPrefix)
+		fileNames := make([]string, 0, len(g.Files))
+		for name := range g.Files {
+			fileNames = append(fileNames, name)
+		}
+		updated := g.UpdatedAt.Format("2006-01-02 15:04")
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", g.ID, desc, strings.Join(fileNames, ", "), updated)
+	}
+	tw.Flush()
+
+	if proxyURL != "" {
+		fmt.Printf("\nProxy: %s/<gist-id>/\n", proxyURL)
+	}
+
+	return nil
 }
 
-// Placeholder — implemented in Task 9
+func runUpdate(args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("usage: gh htmlgist update <gist-id> <file...>")
+	}
+
+	gistID := args[0]
+	filePaths := args[1:]
+
+	files := make(map[string][]byte, len(filePaths))
+	for _, path := range filePaths {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		}
+		name := filepath.Base(path)
+		files[name] = content
+	}
+
+	client, err := newGistClient()
+	if err != nil {
+		return err
+	}
+
+	g, err := client.Update(gistID, files)
+	if err != nil {
+		return fmt.Errorf("updating gist: %w", err)
+	}
+
+	fmt.Println("Gist updated.")
+	printGistInfo(g)
+	return nil
+}
+
 func runDelete(args []string) error {
-	return fmt.Errorf("not yet implemented")
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gh htmlgist delete <gist-id>")
+	}
+
+	client, err := newGistClient()
+	if err != nil {
+		return err
+	}
+
+	if err := client.Delete(args[0]); err != nil {
+		return fmt.Errorf("deleting gist: %w", err)
+	}
+
+	fmt.Printf("Gist %s deleted.\n", args[0])
+	return nil
 }
 
 func runOpen(args []string) error {
