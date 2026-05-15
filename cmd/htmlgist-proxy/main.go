@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/kroepke/gh-htmlgist/internal/auth"
 	"github.com/kroepke/gh-htmlgist/internal/gist"
 	"github.com/kroepke/gh-htmlgist/internal/proxy"
 )
@@ -27,10 +30,32 @@ func main() {
 		log.Fatal("GITHUB_TOKEN environment variable is required")
 	}
 
+	cfTeamURL := os.Getenv("HTMLGIST_CF_TEAM_URL")
+	if cfTeamURL == "" {
+		log.Fatal("HTMLGIST_CF_TEAM_URL environment variable is required")
+	}
+
+	cfAudience := os.Getenv("HTMLGIST_CF_AUDIENCE")
+	if cfAudience == "" {
+		log.Fatal("HTMLGIST_CF_AUDIENCE environment variable is required")
+	}
+
 	addr := os.Getenv("HTMLGIST_ADDR")
 	if addr == "" {
 		addr = ":8080"
 	}
+
+	keyStore := auth.NewKeyStore(cfTeamURL)
+	if err := keyStore.Refresh(); err != nil {
+		slog.Error("failed to fetch initial JWKS", "error", err)
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go keyStore.StartBackgroundRefresh(ctx, 5*time.Minute)
+
+	validator := auth.NewValidator(keyStore, cfTeamURL, cfAudience)
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -42,7 +67,8 @@ func main() {
 
 	client := gist.NewClient(httpClient)
 	handler := proxy.NewHandler(client)
+	authed := auth.Middleware(validator, handler)
 
 	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, handler))
+	log.Fatal(http.ListenAndServe(addr, authed))
 }
