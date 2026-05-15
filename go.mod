@@ -2,7 +2,10 @@ module github.com/kroepke/gh-htmlgist
 
 go 1.26.3
 
-require github.com/cli/go-gh/v2 v2.13.0
+require (
+	github.com/cli/go-gh/v2 v2.13.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
